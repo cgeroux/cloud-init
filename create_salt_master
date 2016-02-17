@@ -1,0 +1,14 @@
+#!/bin/bash
+#test-config
+
+#create VM
+nova boot --image Ubuntu_14.04_Trusty-amd64-20150708 --user-data master-cloudconfig --flavor p1-0.75gb --key-name Vivian salt_master
+
+#wait for it to spin up, might be good to have some sort of polling function?
+sleep 5
+
+#assign ip
+nova add-floating-ip salt_master 206.167.181.71
+
+sleep 10
+

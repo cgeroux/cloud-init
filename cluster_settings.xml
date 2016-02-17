@@ -1,0 +1,10 @@
+<cluster>
+  <node>
+    <name></name><!--Name to give the VM-->
+    <image></image><!--OpenStack image to use-->
+    <flavor></flavor><!--hardware profile flavor-->
+    <key-name></key-name><!--ssh key-pair name-->
+    <cloud-init></cloud-init><!-- optional cloud-init file-->
+    <floating-ip></floating-ip><!-- optionally assign this floating ip -->
+  </node>
+</cluster>

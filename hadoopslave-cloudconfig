@@ -1,0 +1,28 @@
+#cloud-config
+apt_mirror: "http://mirror.bjtu.edu.cn/ubuntu/"
+apt_sources: 
+  - source: "ppa:saltstack/salt"
+packages: 
+  - python-software-properties
+  - salt-minion
+
+runcmd: 
+ - bash /tmp/bootstrap-minion.sh
+
+write_files: 
+  - content: |
+         roles:
+            - hadoop_slave
+    path: /etc/salt/grains
+  - content: |
+        #!/bin/bash
+        sed -i 's/^#master.*$/master: 192.168.173.34/g' /etc/salt/minion
+        sudo service salt-minion restart
+    path: /tmp/bootstrap-minion.sh
+    permissions: "0755"
+  - content: |
+        mine_functions:
+            network.interfaces: []
+            network.ip_addrs: []
+            grains.items: []
+    path: /etc/salt/minion.d/mine_functions.conf
