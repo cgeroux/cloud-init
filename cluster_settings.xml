@@ -1,31 +1,35 @@
-
-
 <cluster 
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="cluster_settings cluster_settings.xsd">
+  
   <node>
-    <name>salt_master</name><!--Name to give the VM-->
-    <image>Ubuntu_14.04_Trusty-amd64-20150708</image><!--OpenStack image to use-->
-    <flavor>p1-0.75gb</flavor><!--hardware profile flavor-->
-    <key-name>Vivian</key-name><!--ssh key-pair name-->
-    <!-- <cloud-init>./master-cloudconfig</cloud-init>optional cloud-init file-->
-    <floating-ip>206.167.181.71</floating-ip><!-- optionally assign this floating ip -->
+    <name>salt_master</name>
+    <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
+    <flavor>p1-0.75gb</flavor>
+    <key-name>Vivian</key-name>
+    <cloud-init>
+      <file>./master-cloudconfig</file>
+    </cloud-init>
+    <floating-ip>206.167.181.71</floating-ip>
     <network>cgeroux-project_network</network>
   </node>
+  
   <node>
     <num-instances>3</num-instances>
     <name>hadoop_slave</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
     <flavor>p1-0.75gb</flavor>
     <key-name>Vivian</key-name>
-    <!--<cloud-init>
-      <replace>
-        <match>IPIWOULDLIKETOREPLACE</match>
-        <node-name>salt_master</node-name>
-        <property>fixed_ip</property>
-      </replace>
+    <cloud-init>
+      <replaces>
+        <replace>
+          <match>IPIWOULDLIKETOREPLACE</match>
+          <node-name>salt_master</node-name>
+          <property>fixed_ip</property>
+        </replace>
+      </replaces>
       <file>./hadoopslave-cloudconfig</file>
-    </cloud-init>-->
+    </cloud-init>
     <network>cgeroux-project_network</network>
     <!--<floating-ip>206.167.181.73</floating-ip>-->
   </node>

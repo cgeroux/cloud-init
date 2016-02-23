@@ -15,6 +15,8 @@ import copy
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
 
+class NoBoot(Exception):
+  pass
 class Node(object):
   """Class for working with compute nodes in OpenStack using the Python API in 
   a nicer simpler way that hides much of the complexity.
@@ -25,7 +27,7 @@ class Node(object):
   """
   
   def __del__(self):
-    """
+    """remove temporary files
     """
     
     #if we used a temporary file close and remove it
@@ -85,7 +87,12 @@ class Node(object):
       
     
     #if there aren't any replace nodes
-    if self.xmlSettings.find("cloud-init").findall("replace")==None:
+    hasReplaces=False
+    if self.xmlSettings.find("cloud-init").find("replaces")!=None:#if there is a replaces element
+      if self.xmlSettings.find("cloud-init").find("replaces").findall("replace")!=None:
+        hasReplaces=True
+    
+    if not hasReplaces:
       return open(self.xmlSettings.find("cloud-init").find("file").text,'r')
     
     #need to create a temporary file with values replaced that doesn't already
@@ -110,7 +117,8 @@ class Node(object):
     
     #perform replaces on file as needed
     replaces=[]
-    for xmlReplace in self.xmlSettings.find("cloud-init").findall("replace"):
+    
+    for xmlReplace in self.xmlSettings.find("cloud-init").find("replaces").findall("replace"):
       
       replaces.append((xmlReplace.find("match").text
         ,xmlReplace.find("node-name").text
@@ -186,9 +194,9 @@ class Node(object):
     
     #if node still not booted, skip any more setup
     if iters>=maxWaitTimeForNodeBoot:
-      print("      WARNING: node took too long to boot, setup may be "
+      raise NoBoot("      WARNING: node took too long to boot, setup may be "
         +"incomplete.")
-      return
+      
     
     #at this point the node should be booted
     print()#add a new line
@@ -223,7 +231,14 @@ class Node(object):
     except novaclient.exceptions.NotFound:
       
       #no existing node found, create a new one
-      self._createNewNode()
+      try:
+        self._createNewNode()
+      except NoBoot as e:
+        print()
+        print(e.args[0])
+        print("      deleting node and trying again ... ")
+        self.delete()
+        self._createNewNode()
       
     #more than one match for that name
     except novaclient.exceptions.NoUniqueMatch:
@@ -247,7 +262,7 @@ class Cluster(object):
   
   def __init__(self,clusterElement,nova):
     
-    #Intialize node list
+    #Initialize node list
     self.nodes=[]
     for xmlNode in clusterElement:
       

@@ -13,7 +13,7 @@
                 <xs:element name="flavor" type="xs:string" />
                 <xs:element name="key-name" type="xs:string" />
                 <xs:element name="network" type="xs:string" />
-                <xs:element name="num-instances" minOccurs="0" maxOccurs="1" default="1">
+                <xs:element name="num-instances" minOccurs="0" maxOccurs="1">
                   <xs:simpleType>
                     <xs:restriction base="xs:integer">
                       <xs:minInclusive value="1"/>
@@ -30,20 +30,26 @@
                 <xs:element name="cloud-init" minOccurs="0" maxOccurs="1">
                   <xs:complexType>
                     <xs:all>
-                      <xs:element name="file" type="xs:string"/>
-                      <xs:element name="replace">
+                      <xs:element name="file" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                      <xs:element name="replaces" minOccurs="0" maxOccurs="1">
                         <xs:complexType>
-                          <xs:all>
-                            <xs:element name="match" type="xs:string"/>
-                            <xs:element name="node-name" type="xs:string"/>
-                            <xs:element name="property">
-                              <xs:simpleType>
-                                <xs:restriction base="xs:string">
-                                  <xs:enumeration value="fixed_ip"/>
-                                </xs:restriction>
-                              </xs:simpleType>
+                          <xs:sequence>
+                            <xs:element name="replace" minOccurs="0" maxOccurs="unbounded">
+                              <xs:complexType>
+                                <xs:all>
+                                  <xs:element name="match" type="xs:string"/>
+                                  <xs:element name="node-name" type="xs:string"/>
+                                  <xs:element name="property">
+                                    <xs:simpleType>
+                                      <xs:restriction base="xs:string">
+                                        <xs:enumeration value="fixed_ip"/>
+                                      </xs:restriction>
+                                    </xs:simpleType>
+                                  </xs:element>
+                                </xs:all>
+                              </xs:complexType>
                             </xs:element>
-                          </xs:all>
+                          </xs:sequence>
                         </xs:complexType>
                       </xs:element>
                     </xs:all>
