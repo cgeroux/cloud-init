@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import optparse as op
-import xml.etree.ElementTree as xml
+#import xml.etree.ElementTree as xml
+from lxml import etree
+from lxml import objectify
 import time
 from os import environ as env
 import novaclient.v1_1.client as nvclient
 import novaclient
 import sys
+import os
+import copy
 
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
@@ -20,80 +24,23 @@ class Node(object):
   in the lower level OpenStack python API.
   """
   
-  #structures to describe the structure of the xml element describing the node
-  requiredSettings=["name","image","flavor","key-name","network"]
-  requiredSettingsAttributes={}
-  optionalSetings=["floating-ip","cloud-init"]
-  optionalSetingsAttributes={"cloud-init":["match","replace"]}
-  
-  def __init__(self,nodeElement,nova):
+  def __del__(self):
+    """
+    """
+    
+    #if we used a temporary file close and remove it
+    if self.tmpFileName!=None:
+      self.outFile.close()
+      os.remove(self.tmpFileName)
+      self.tmpFileName=None
+      self.outFile=None
+  def __init__(self,xmlNode,nova):
     """Parse the XML element nodeElement to initialize the settings for the node
     """
-    self.nova=nova
-    self.settings={}#a dictionary containing the text of xml elements with the  
-      #name of the xml element as the key
-    self.settingsAttributes={}#A 2D dictionary with xml element name and 
-      #attribute as the two keys to access the element attribute value
     
-    #parse required settings
-    #if they are not present raise an exception
-    for requiredSetting in self.requiredSettings:
-      
-      #get all elements of this name
-      requiredSettingElements=nodeElement.findall(requiredSetting)
-      
-      #check that we have one and only one element for this requiredSetting
-      if len(requiredSettingElements)!=1:
-        raise Exception("Must have one and only one \""+requiredSetting
-          +"\" elements per node element")
-      
-      #check to make sure there is text in the element
-      setting=requiredSettingElements[0].text
-      if setting==None:
-        raise Exception("\""+requiredSetting+"\" is empty, must have a value")
-      
-      #save the setting
-      self.settings[requiredSetting]=setting
-      
-      #Get attributes of element if it has any
-      if(requiredSetting in self.requiredSettingsAttributes.keys()):
-        
-        self.settingsAttributes[requiredSetting]={}
-        for attribute in self.requiredSettingsAttributes[requiredSetting]:
-          self.settingsAttributes[requiredSetting][attribute] \
-            =optionalSettingElements[0].get(attribute)
-
-    #parse optional settings
-    for optionalSetting in self.optionalSetings:
-      
-      #get all elements of this name
-      optionalSettingElements=nodeElement.findall(optionalSetting)
-      
-      #check that one or less elements
-      numElements=len(optionalSettingElements)
-      if numElements>1:
-        raise Exception("Must have one or fewer \""+optionalSetting
-          +"\" elements per node element")
-      
-      #If there is an element get the setting
-      if numElements==1:
-        setting=optionalSettingElements[0].text
-        if setting==None:
-          raise Exception("\""+requiredSetting+"\" is empty, must have a value")
-        
-        #save the setting
-        self.settings[optionalSetting]=setting
-        
-        #Get attributes of element if it has any
-        if(optionalSetting in self.optionalSetingsAttributes.keys()):
-          
-          self.settingsAttributes[optionalSetting]={}
-          for attribute in self.optionalSetingsAttributes[optionalSetting]:
-            self.settingsAttributes[optionalSetting][attribute] \
-              =optionalSettingElements[0].get(attribute)
-          
-      else:#no node, set setting to None
-        self.settings[optionalSetting]=None
+    self.nova=nova
+    self.xmlSettings=xmlNode
+    self.tmpFileName=None
   def _assignFloatingIP(self):
     """Assigns a floating ip if not already assigned to a node and it is 
     available for use
@@ -103,17 +50,18 @@ class Node(object):
     ipList=self.nova.floating_ips.list()
     requestedIPExists=False
     ipToUse=None
+    xmlIPSetting=self.xmlSettings.find("floating-ip").text
     for ip in ipList:
       
       #if we found the ip we wanted to assign in the list
-      if ip.ip==self.settings["floating-ip"]:
+      if ip.ip==xmlIPSetting:
         requestedIPExists=True
         ipToUse=ip
     
     #if ip doesn't exist, don't add it
     if not requestedIPExists:
       print("    WARNING: The requested floating ip "
-        +self.settings["floating-ip"]
+        +xmlIPSetting
         +"\" does not exist. Not assigning it to node.")
       return
     
@@ -125,21 +73,77 @@ class Node(object):
       return
     
     #assign the ip to the node
-    print("    Adding floating ip "+self.settings["floating-ip"]+" ...")
+    print("    Adding floating ip "+xmlIPSetting+" ...")
     self.instance.add_floating_ip(ipToUse)
   def _createUserDataFile(self):
     """Returns a file object pointing to the user data file
     """
     
     #if there isn't a cloud init file given nothing to do
-    if(self.settings["cloud-init"]==None):
+    if( self.xmlSettings.find("cloud-init")==None ):
       return None
       
-    #TODO: need to do a string replace based on values of 
-    #self.settingsAttributes["cloud-init"]["match"] and
-    #self.settingsAttributes["cloud-init"]["replace"]
     
-    return open(self.settings["cloud-init"],'r')
+    #if there aren't any replace nodes
+    if self.xmlSettings.find("cloud-init").findall("replace")==None:
+      return open(self.xmlSettings.find("cloud-init").find("file").text,'r')
+    
+    #need to create a temporary file with values replaced that doesn't already
+    #exist
+    fileName=str(self.xmlSettings.find("cloud-init").find("file").text)
+    tmpFileName=fileName+".tmp"
+    fileExists=os.path.isfile(tmpFileName)
+    count=0
+    while(fileExists):
+      tmpFileName=fileName+str(count)+".tmp"
+      count+=1
+      #print(tmpFileName)
+      fileExists=os.path.isfile(tmpFileName)
+    
+    #open reference file
+    inFile=open(fileName,'r')
+    inFileContent=inFile.read()
+    
+    #open temporary settings file
+    outFile=open(tmpFileName,'w')
+    self.tmpFileName=tmpFileName
+    
+    #perform replaces on file as needed
+    replaces=[]
+    for xmlReplace in self.xmlSettings.find("cloud-init").findall("replace"):
+      
+      replaces.append((xmlReplace.find("match").text
+        ,xmlReplace.find("node-name").text
+        ,xmlReplace.find("property").text))
+    
+    for replace in replaces:
+      
+      #get property of node
+      existingNode=self.nova.servers.find(name=replace[1])
+      
+      toReplace=replace[0]#initialize so it does nothing
+      if(replace[2]=="fixed_ip"):
+      
+        #if on more than one network, we get confused
+        if len(existingNode.networks.keys())>1:
+          raise Exception("node with name \""+replace[1]
+            +"\" belongs to more than one network can not determine which "
+            +"fixed_ip to use")
+        
+        #the replacement text
+        #TODO: this may not be very general and should be tested more
+        toReplace=str(existingNode.networks[existingNode.networks.keys()[0]][0])
+      
+      #do the replacement
+      inFileContent=inFileContent.replace(replace[0],toReplace)
+    
+    #write out the new file after all replacements are done
+    outFile.write(inFileContent)
+    outFile.close()
+    
+    #return the temporary file with replacements done
+    self.outFile=open(tmpFileName,'r')
+    return self.outFile
   def _createNewNode(self):
     """Boots a new node
     """
@@ -147,42 +151,42 @@ class Node(object):
     print("    Creating new node ",end="")
     
     #Get parameters for creating a node
-    image=self.nova.images.find(name=self.settings["image"])
-    flavor=self.nova.flavors.find(name=self.settings["flavor"])
-    net=self.nova.networks.find(label=self.settings["network"])
+    image=self.nova.images.find(name=self.xmlSettings.find("image").text)
+    flavor=self.nova.flavors.find(name=self.xmlSettings.find("flavor").text)
+    net=self.nova.networks.find(label=self.xmlSettings.find("network").text)
     nics=[{'net-id':net.id}]
     
     userDataFile=self._createUserDataFile()
     
     if userDataFile==None:
       self.instance=self.nova.servers.create(
-        name=self.settings["name"]
+        name=self.xmlSettings.find("name").text
         ,image=image
         ,flavor=flavor
-        ,key_name=self.settings["key-name"]
+        ,key_name=self.xmlSettings.find("key-name").text
         ,nics=nics)
     else:
       self.instance=self.nova.servers.create(
-        name=self.settings["name"]
+        name=self.xmlSettings.find("name").text
         ,image=image
         ,flavor=flavor
-        ,key_name=self.settings["key-name"]
+        ,key_name=self.xmlSettings.find("key-name").text
         ,nics=nics
         ,userdata=userDataFile)
     
     #wait for it to spin up before trying to assign an ip
     iters=0
-    server=self.nova.servers.find(name=self.settings["name"])
+    server=self.nova.servers.find(name=self.xmlSettings.find("name").text)
     while (server.status!="ACTIVE" and iters<maxWaitTimeForNodeBoot):
       print(".",end="")
       sys.stdout.flush()
       time.sleep(1)
-      server=self.nova.servers.find(name=self.settings["name"])
+      server=self.nova.servers.find(name=self.xmlSettings.find("name").text)
       iters+=1
     
     #if node still not booted, skip any more setup
     if iters>=maxWaitTimeForNodeBoot:
-      print("      WARNING: node took too long to boot setup may be "
+      print("      WARNING: node took too long to boot, setup may be "
         +"incomplete.")
       return
     
@@ -192,19 +196,19 @@ class Node(object):
     self.instance=server#assign updated version of server
       
     #if we have a floating ip add it
-    if self.settings["floating-ip"]!=None:
+    if self.xmlSettings.find("floating-ip")!=None:
       self._assignFloatingIP()
   def create(self):
     """Creates a node if needed, and ensures node is active
     """
     
-    print("  booting the node \""+self.settings["name"]+"\" ...")
-    
+    nodeName=self.xmlSettings.find("name").text
+    print("  booting the node \""+nodeName+"\" ...")
     try:
       
       #try getting an existing node, if it fails there may be no node
       #or multiple nodes
-      existingNode=self.nova.servers.find(name=self.settings["name"])
+      existingNode=self.nova.servers.find(name=nodeName)
       
       #Check if the node is active
       #TODO: should handle more statuses correctly
@@ -228,11 +232,11 @@ class Node(object):
   def delete(self):
     """deletes the node
     """
-    
-    print("  deleting the node \""+self.settings["name"]+"\" ...")
+    nodeName=self.xmlSettings.find("name").text
+    print("  deleting the node \""+nodeName+"\" ...")
     
     try:
-      server=self.nova.servers.find(name=self.settings["name"])
+      server=self.nova.servers.find(name=nodeName)
       self.nova.servers.delete(server)
       print("    Node deleted")
     except novaclient.exceptions.NotFound:
@@ -242,32 +246,35 @@ class Cluster(object):
   """
   
   def __init__(self,clusterElement,nova):
-
-    #loop over all node nodes
-    nodeElements=clusterElement.findall("node")
-    if len(nodeElements)==0:
-      raise Exception("No \"node\" elements found under \"cluster\" element! "
-        +"can not create an empty cluster.")
     
-    #Initialize nodes
+    #Intialize node list
     self.nodes=[]
-    for nodeElement in nodeElements:
+    for xmlNode in clusterElement:
       
-      #get number of instances to make of the node
-      numInstances=nodeElement.get("num-instances")
-      if numInstances!=None:
-        numInstances=int(numInstances)
+      #get number of instances
+      xmlNumInstances=xmlNode.find("num-instances")
+      numInstances=1
+      if xmlNumInstances!=None:
+        numInstances=int(xmlNumInstances.text)
       
-      if numInstances==None or numInstances==1:
+      #create the nodes
+      if numInstances==1:#if only one node
         
         #create one instance
-        self.nodes.append(Node(nodeElement,nova))
+        self.nodes.append(Node(xmlNode,nova))
       else:
         
         #create numInstances with a suffix added to the name
+        originalName=xmlNode.find("name").text
         for i in range(numInstances):
-          node=Node(nodeElement,nova)
-          node.settings["name"]+="-"+str(i)
+          
+          #create a node
+          xmlCurNode=copy.deepcopy(xmlNode)
+          node=Node(xmlCurNode,nova)
+          
+          #adjust the node name
+          xmlName=xmlCurNode.find("name")
+          xmlName.text=originalName+"-"+str(i)
           self.nodes.append(node)
   def create(self):
     """Creates all the nodes in the cluster as needed and ensures they are all
@@ -325,9 +332,17 @@ def main():
   print(verbs[actions.index(args[1])]+" the cluster described by \""
     +args[0]+"\" ...")
   
-  #get root element of config file
-  tree=xml.parse(args[0])
-  root=tree.getroot()
+  #parse xml file
+  #xmlFile=open(args[0])
+  #xml=xmlFile.read()
+  tree=etree.parse(args[0])
+  xmlCluster=tree.getroot()
+  
+  #load schema to validate against
+  schema=etree.XMLSchema(file="./cluster_settings.xsd")
+  
+  #validate against schema
+  schema.assertValid(tree)
   
   #create the nova client
   nova=nvclient.Client(auth_url=env['OS_AUTH_URL']
@@ -335,7 +350,7 @@ def main():
     ,project_id=env['OS_TENANT_NAME'],region_name=env['OS_REGION_NAME'])
   
   #Initialize the cluster
-  cluster=Cluster(root,nova)
+  cluster=Cluster(xmlCluster,nova)
   
   #perform the given action on the cluster
   clusterAction=getattr(cluster,args[1])

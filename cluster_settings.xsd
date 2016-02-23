@@ -1,0 +1,59 @@
+<xs:schema 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  delemntFormDefault="qualified">
+
+  <xs:element name="cluster">
+    <xs:complexType>
+      <xs:sequence>
+          <xs:element name="node" minOccurs="1" maxOccurs="unbounded">
+            <xs:complexType>
+              <xs:all>
+                <xs:element name="name" type="xs:string" />
+                <xs:element name="image" type="xs:string" />
+                <xs:element name="flavor" type="xs:string" />
+                <xs:element name="key-name" type="xs:string" />
+                <xs:element name="network" type="xs:string" />
+                <xs:element name="num-instances" minOccurs="0" maxOccurs="1" default="1">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:integer">
+                      <xs:minInclusive value="1"/>
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element >
+                <xs:element name="floating-ip" minOccurs="0" maxOccurs="1">
+                  <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                      <xs:pattern value="[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}"/>
+                    </xs:restriction>
+                  </xs:simpleType>
+                </xs:element>
+                <xs:element name="cloud-init" minOccurs="0" maxOccurs="1">
+                  <xs:complexType>
+                    <xs:all>
+                      <xs:element name="file" type="xs:string"/>
+                      <xs:element name="replace">
+                        <xs:complexType>
+                          <xs:all>
+                            <xs:element name="match" type="xs:string"/>
+                            <xs:element name="node-name" type="xs:string"/>
+                            <xs:element name="property">
+                              <xs:simpleType>
+                                <xs:restriction base="xs:string">
+                                  <xs:enumeration value="fixed_ip"/>
+                                </xs:restriction>
+                              </xs:simpleType>
+                            </xs:element>
+                          </xs:all>
+                        </xs:complexType>
+                      </xs:element>
+                    </xs:all>
+                  </xs:complexType>
+                </xs:element>
+              </xs:all>
+            </xs:complexType>
+          </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
