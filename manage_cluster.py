@@ -15,7 +15,7 @@ import string
 
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
-keepTmpFiles=True#set to true if one wishes to keep temporary files for debugging
+keepTmpFiles=False#set to true if one wishes to keep temporary files for debugging
 
 class NoBoot(Exception):
   pass
