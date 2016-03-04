@@ -11,9 +11,11 @@ import novaclient
 import sys
 import os
 import copy
+import string
 
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
+keepTmpFiles=True#set to true if one wishes to keep temporary files for debugging
 
 class NoBoot(Exception):
   pass
@@ -30,12 +32,14 @@ class Node(object):
     """remove temporary files
     """
     
-    #if we used a temporary file close and remove it
-    if self.tmpFileName!=None:
-      self.outFile.close()
-      os.remove(self.tmpFileName)
-      self.tmpFileName=None
-      self.outFile=None
+    if not keepTmpFiles:
+      
+      #if we used a temporary file close and remove it
+      if self.tmpFileName!=None:
+        self.outFile.close()
+        os.remove(self.tmpFileName)
+        self.tmpFileName=None
+        self.outFile=None
   def __init__(self,xmlNode,nova):
     """Parse the XML element nodeElement to initialize the settings for the node
     """
@@ -43,6 +47,52 @@ class Node(object):
     self.nova=nova
     self.xmlSettings=xmlNode
     self.tmpFileName=None
+    self._validateHostName()#check for a valid hostname
+  def _validateHostName(self):
+    """source:
+    https://en.wikipedia.org/wiki/Hostname#Restrictions_on_valid_host_names
+    
+    1) must be under 253 characters
+    2) each label (seperated by ".") must be between 1 and 63 characters long
+    3) each label must contain only ASCII letters 'a' - 'Z' (case-insensitive)
+      , '0' - '9', and '-'
+    4) labels must not start or end with a '-'
+    5) must be case-insensitive (i.e. will convert upper case to lower case)
+    
+    """
+    
+    allowed=set(string.ascii_lowercase+string.digits+"-"+string.ascii_uppercase)
+    
+    #get hostname
+    hostname=self.xmlSettings.find("name").text
+    
+    #1) check for overall length
+    if(len(hostname)>252):
+      raise Exception("hostname \""+hostname+"\" is longer than 253 characters")
+    
+    labels=hostname.split(".")
+    
+    
+    for label in labels:
+      
+      #2) check for length of label
+      if not (len(label) <= 63 and len(label) >= 1):
+        raise Exception("hostname label \""+label+"\" is "+str(len(label))
+        +" characters long which is not between 1 and 63 characters long")
+      
+      #3) check for invalid characters
+      if not (set(label) <= allowed):
+        raise Exception("hostname label \""+label
+          +"\" contains characters which are not allowed, \""
+          +str(set(label)-allowed)+"\"")
+      
+      #4) must not start with a '-'
+      if label[0]=='-':
+        raise Exception("label \""+label
+        +"\" starts with a '-' which is not allowed")
+    
+    
+    self.xmlSettings.find("name").text=self.xmlSettings.find("name").text.lower()
   def _assignFloatingIP(self):
     """Assigns a floating ip if not already assigned to a node and it is 
     available for use
@@ -77,7 +127,7 @@ class Node(object):
     #assign the ip to the node
     print("    Adding floating ip "+xmlIPSetting+" ...")
     self.instance.add_floating_ip(ipToUse)
-  def _createUserDataFile(self):
+  def _createUserDataFile(self,nodes):
     """Returns a file object pointing to the user data file
     """
     
@@ -111,39 +161,56 @@ class Node(object):
     inFile=open(fileName,'r')
     inFileContent=inFile.read()
     
-    #open temporary settings file
-    outFile=open(tmpFileName,'w')
-    self.tmpFileName=tmpFileName
-    
     #perform replaces on file as needed
     replaces=[]
     
     for xmlReplace in self.xmlSettings.find("cloud-init").find("replaces").findall("replace"):
       
       replaces.append((xmlReplace.find("match").text
-        ,xmlReplace.find("node-name").text
+        ,xmlReplace.find("nodes-with-property").text
         ,xmlReplace.find("property").text))
     
     for replace in replaces:
       
-      #get property of node
-      existingNode=self.nova.servers.find(name=replace[1])
-      
-      toReplace=replace[0]#initialize so it does nothing
-      if(replace[2]=="fixed_ip"):
-      
-        #if on more than one network, we get confused
-        if len(existingNode.networks.keys())>1:
-          raise Exception("node with name \""+replace[1]
-            +"\" belongs to more than one network can not determine which "
-            +"fixed_ip to use")
+      #get list of nodes with the given property
+      matchingNodes=[]
+      for node in nodes:
+        xmlProperties=node.xmlSettings.find("properties").findall("property")
         
-        #the replacement text
-        #TODO: this may not be very general and should be tested more
-        toReplace=str(existingNode.networks[existingNode.networks.keys()[0]][0])
+        for xmlProperty in xmlProperties:
+          if xmlProperty.text==replace[1]:
+            matchingNodes.append(node)
+      
+      toReplace=""
+      
+      #handle fixed_ip
+      if(replace[2]=="fixed_ip"):
+        
+        for matchingNode in matchingNodes:
+        
+          existingNode=self.nova.servers.find(
+            name=matchingNode.xmlSettings.find("name").text)
+          
+          #if on more than one network, we get confused
+          if len(existingNode.networks.keys())>1:
+            raise Exception("node with name \""+replace[1]
+              +"\" belongs to more than one network can not determine which "
+              +"fixed_ip to use")
+          
+          #the replacement text
+          #TODO: this may not be very general and should be tested more
+          toReplace+=str(existingNode.networks[existingNode.networks.keys()[0]][0])+" "
+        
+      if(replace[2]=="name"):
+        toReplace=""
+        for matchingNode in matchingNodes:
+          toReplace+=matchingNode.xmlSettings.find("name").text+" "
       
       #do the replacement
-      inFileContent=inFileContent.replace(replace[0],toReplace)
+      inFileContent=inFileContent.replace(replace[0],str(toReplace))
+    
+    #open temporary settings file
+    outFile=open(tmpFileName,'w')
     
     #write out the new file after all replacements are done
     outFile.write(inFileContent)
@@ -151,8 +218,9 @@ class Node(object):
     
     #return the temporary file with replacements done
     self.outFile=open(tmpFileName,'r')
+    self.tmpFileName=tmpFileName
     return self.outFile
-  def _createNewNode(self):
+  def _createNewNode(self,nodes):
     """Boots a new node
     """
     
@@ -164,7 +232,7 @@ class Node(object):
     net=self.nova.networks.find(label=self.xmlSettings.find("network").text)
     nics=[{'net-id':net.id}]
     
-    userDataFile=self._createUserDataFile()
+    userDataFile=self._createUserDataFile(nodes)
     
     if userDataFile==None:
       self.instance=self.nova.servers.create(
@@ -206,7 +274,7 @@ class Node(object):
     #if we have a floating ip add it
     if self.xmlSettings.find("floating-ip")!=None:
       self._assignFloatingIP()
-  def create(self):
+  def create(self,nodes):
     """Creates a node if needed, and ensures node is active
     """
     
@@ -232,13 +300,13 @@ class Node(object):
       
       #no existing node found, create a new one
       try:
-        self._createNewNode()
+        self._createNewNode(nodes)
       except NoBoot as e:
         print()
         print(e.args[0])
         print("      deleting node and trying again ... ")
         self.delete()
-        self._createNewNode()
+        self._createNewNode(nodes)
       
     #more than one match for that name
     except novaclient.exceptions.NoUniqueMatch:
@@ -297,7 +365,11 @@ class Cluster(object):
     """
     
     for node in self.nodes:
-      node.create()
+      node.create(self.nodes)
+      
+    print("it may take some time for any cloud-init operations to complete, try "
+      +"logging into a node and running ps -A | grep \"cloud-init\" to see if "
+      +"cloud-init is still running")
   def delete(self):
     """Deletes all the nodes in the cluster
     """
@@ -359,6 +431,16 @@ def main():
   #validate against schema
   schema.assertValid(tree)
   
+  #check to see if the environment has the expected variables
+  envVars=env.keys()
+  requiredVars=["OS_AUTH_URL","OS_USERNAME","OS_PASSWORD","OS_TENANT_NAME"
+    ,"OS_REGION_NAME"]
+  for var in requiredVars:
+    
+    if( var not in envVars):
+      raise Exception("environment variable \""+var
+        +"\" not found, did you source the cloud *-openrc.sh file?")
+  
   #create the nova client
   nova=nvclient.Client(auth_url=env['OS_AUTH_URL']
     ,username=env['OS_USERNAME'],api_key=env['OS_PASSWORD']
@@ -370,40 +452,5 @@ def main():
   #perform the given action on the cluster
   clusterAction=getattr(cluster,args[1])
   clusterAction()
-  
-  """
-    print "Settings for salt_master:"
-    print "  saltMasterImage=",options.saltMasterImage
-    print "  saltMasterCloudInit=",options.saltMasterCloudInit
-    print "  saltMasterFlavor=",options.saltMasterFlavor
-    print "  saltMasterKeyName=",options.saltMasterKeyName
-    print "  saltMasterFloatingIP=",options.saltMasterFloatingIP
-    
-    #nova boot --image options.saltMasterImage 
-    #--user-data options.saltMasterCloudInit --flavor options.saltMasterFlavor 
-    #--key-name options.saltMasterKeyName salt_master
-    cmd=["nova","boot"
-      ,"--image",options.saltMasterImage
-      ,"--user-data",options.saltMasterCloudInit
-      ,"--flavor",options.saltMasterFlavor
-      ,"--key-name",options.saltMasterKeyName
-      ,"--key-name",options.saltMasterKeyName
-      ,"salt_master"
-      ]
-    process=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    stdout,stderr=process.communicate()
-    print stdout
-    print stderr
-    
-    #now wait some time and then assign a floating-ip
-    time.sleep(5)
-    cmd=["nova","add-floating-ip","salt_master",options.saltMasterFloatingIP]
-    process=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    stdout,stderr=process.communicate()
-    print stdout
-    print stderr
-    
-    #create hadoop-master (get local salt_master ip)
-  """
 if __name__ == "__main__":
   main()

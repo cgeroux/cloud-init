@@ -1,13 +1,12 @@
 #cloud-config
-apt_mirror: http://mirror.bjtu.edu.cn/ubuntu/
+
 
 apt_sources:
  - source: "ppa:saltstack/salt"
-
 packages:
  - python-software-properties
- - salt-master
  - git
+ - salt-master
 
 write_files:
  - content: |
@@ -59,5 +58,8 @@ runcmd:
  - git clone https://github.com/saltstack-formulas/hadoop-formula /srv/salt/formulas/hadoop-formula
  - git clone https://github.com/saltstack-formulas/hostsfile-formula /srv/salt/formulas/hostsfile-formula
  - git clone https://github.com/saltstack-formulas/sun-java-formula /srv/salt/formulas/sun-java-formula
+ - git clone https://github.com/cgeroux/init-salt.git /tmp/salt-init
  - sudo service salt-master restart
  - cd /srv/salt/formulas/hadoop-formula/hadoop/files;./generate_keypairs.sh
+ - /tmp/salt-init/salt-init.py MINIONLIST
+ 

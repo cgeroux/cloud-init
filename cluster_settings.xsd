@@ -13,6 +13,14 @@
                 <xs:element name="flavor" type="xs:string" />
                 <xs:element name="key-name" type="xs:string" />
                 <xs:element name="network" type="xs:string" />
+                <xs:element name="properties" minOccurs="0" maxOccurs="1">
+                  <xs:complexType>
+                    <xs:sequence>
+                    <xs:element name="property" minOccurs="0" maxOccurs="unbounded" type="xs:string" />
+                    </xs:sequence>
+                  </xs:complexType>
+                </xs:element>
+                
                 <xs:element name="num-instances" minOccurs="0" maxOccurs="1">
                   <xs:simpleType>
                     <xs:restriction base="xs:integer">
@@ -38,11 +46,12 @@
                               <xs:complexType>
                                 <xs:all>
                                   <xs:element name="match" type="xs:string"/>
-                                  <xs:element name="node-name" type="xs:string"/>
+                                  <xs:element name="nodes-with-property" type="xs:string"/>
                                   <xs:element name="property">
                                     <xs:simpleType>
                                       <xs:restriction base="xs:string">
                                         <xs:enumeration value="fixed_ip"/>
+                                        <xs:enumeration value="name"/>
                                       </xs:restriction>
                                     </xs:simpleType>
                                   </xs:element>

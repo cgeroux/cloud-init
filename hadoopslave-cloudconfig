@@ -1,7 +1,6 @@
 #cloud-config
-apt_mirror: "http://mirror.bjtu.edu.cn/ubuntu/"
-apt_sources: 
-  - source: "ppa:saltstack/salt"
+apt_sources:
+ - source: "ppa:saltstack/salt"
 packages: 
   - python-software-properties
   - salt-minion
@@ -16,7 +15,7 @@ write_files:
     path: /etc/salt/grains
   - content: |
         #!/bin/bash
-        sed -i 's/^#master.*$/master: IPIWOULDLIKETOREPLACE/g' /etc/salt/minion
+        sed -i 's/^#master.*$/master: IPTOREPLACE/g' /etc/salt/minion
         sudo service salt-minion restart
     path: /tmp/bootstrap-minion.sh
     permissions: "0755"
