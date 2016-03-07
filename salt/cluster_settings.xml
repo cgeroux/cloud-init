@@ -1,0 +1,49 @@
+<cluster 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="cluster_settings cluster_settings.xsd">
+  
+  <node>
+    <name>master</name>
+    <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
+    <flavor>p1-0.75gb</flavor>
+    <key-name>thekey</key-name>
+    <properties>
+      <property>salt-master</property>
+      <property>salt-minion</property>
+    </properties>
+    <cloud-init>
+      <replaces>
+        <replace>
+          <match>MINIONLIST</match>
+          <nodes-with-property>salt-minion</nodes-with-property>
+          <property>name</property>
+        </replace>
+      </replaces>
+      <file>./master.yaml</file>
+    </cloud-init>
+    <floating-ip>206.167.181.71</floating-ip>
+    <network>cgeroux-project_network</network>
+  </node>
+  
+  <node>
+    <num-instances>3</num-instances>
+    <name>slave</name>
+    <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
+    <flavor>p1-0.75gb</flavor>
+    <key-name>thekey</key-name>
+    <properties>
+      <property>salt-minion</property>
+    </properties>
+    <cloud-init>
+      <replaces>
+        <replace>
+          <match>IPTOREPLACE</match>
+          <nodes-with-property>salt-master</nodes-with-property>
+          <property>fixed_ip</property>
+        </replace>
+      </replaces>
+      <file>./slave.yaml</file>
+    </cloud-init>
+    <network>cgeroux-project_network</network>
+  </node>
+</cluster>

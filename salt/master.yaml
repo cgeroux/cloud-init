@@ -1,0 +1,32 @@
+#cloud-config
+apt_sources:
+  - source: "ppa:saltstack/salt"
+packages:
+  - python-software-properties
+  - git
+  - salt-master
+  - salt-minion
+
+write_files:
+  - content: |
+        #!/bin/bash
+        sed -i 's/^#auto_accept.*$/auto_accept: True/g' /etc/salt/master
+        sudo service salt-master restart
+    path: /tmp/bootstrap-master.sh
+    permissions: "0755"
+  - content: |
+        #!/bin/bash
+        sed -i 's/^#master.*$/master: 127.0.0.1/g' /etc/salt/minion
+        sudo service salt-minion restart
+    path: /tmp/bootstrap-minion.sh
+    permissions: "0755"
+  - content: |
+      file_roots:
+        base:
+          - /srv/salt
+    path: /etc/salt/master.d/file_roots.conf
+    permissions: '0644'
+
+runcmd:
+  - bash /tmp/bootstrap-master.sh
+  - bash /tmp/bootstrap-minion.sh

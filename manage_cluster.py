@@ -13,9 +13,21 @@ import os
 import copy
 import string
 
+#TODO: 
+# - automatic detection of network to connect to
+# - optional use of a local key instead of an OpenStack key
+# - create floating ip if there isn't one?
+# - handle creating an ssh network rule
+# - allow addition of other rules such as opening port 80 for http
+# - If some of these things are automated then could just provide the command
+#   to connect to the machine at the end of the setup.
+# - maybe add a way to automatically tell when the system is all setup, check 
+#   if cloud-init is still running? Pull down log of master?
+
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
 keepTmpFiles=False#set to true if one wishes to keep temporary files for debugging
+settingsFilePath=None
 
 class NoBoot(Exception):
   pass
@@ -147,7 +159,8 @@ class Node(object):
     
     #need to create a temporary file with values replaced that doesn't already
     #exist
-    fileName=str(self.xmlSettings.find("cloud-init").find("file").text)
+    fileName=os.path.join(settingsFilePath
+      ,str(self.xmlSettings.find("cloud-init").find("file").text))
     tmpFileName=fileName+".tmp"
     fileExists=os.path.isfile(tmpFileName)
     count=0
@@ -415,6 +428,10 @@ def main():
   #check we got an action we recognize
   if args[1] not in actions:
     raise Exception(args[1]+" not in known actions "+str(actions))
+  
+  global settingsFilePath
+  settingsFilePath=os.path.dirname(args[0])
+  #print("settingsFilePath=",settingsFilePath)
   
   print(verbs[actions.index(args[1])]+" the cluster described by \""
     +args[0]+"\" ...")
