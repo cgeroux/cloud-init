@@ -18,11 +18,14 @@ import string
 # - optional use of a local key instead of an OpenStack key
 # - create floating ip if there isn't one?
 # - handle creating an ssh network rule
-# - allow addition of other rules such as opening port 80 for http
+# - allow addition of other network rules such as opening port 80 for http
 # - If some of these things are automated then could just provide the command
 #   to connect to the machine at the end of the setup.
 # - maybe add a way to automatically tell when the system is all setup, check 
 #   if cloud-init is still running? Pull down log of master?
+# - add ability to boot from volumes
+# - add ability to mount volumes (may need to do this via cloud-init/salt)
+# - improve the way salt minions connect to salt master (using keys or something)
 
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20

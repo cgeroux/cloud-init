@@ -5,7 +5,7 @@
   <node>
     <name>master</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
-    <flavor>p1-0.75gb</flavor>
+    <flavor>c1-3.75gb-36</flavor>
     <key-name>thekey</key-name>
     <properties>
       <property>salt-master</property>
@@ -29,7 +29,7 @@
     <num-instances>3</num-instances>
     <name>slave</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
-    <flavor>p1-0.75gb</flavor>
+    <flavor>c1-3.75gb-36</flavor>
     <key-name>thekey</key-name>
     <properties>
       <property>salt-minion</property>

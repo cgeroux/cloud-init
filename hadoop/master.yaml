@@ -48,6 +48,7 @@ write_files:
           - sun-java.env
           - hadoop
           - hadoop.hdfs
+          - hadoop.spark
     path: /srv/salt/top.sls
   - content: |
       base:
@@ -60,6 +61,8 @@ write_files:
         users:
           hadoop: 6000
           hdfs: 6001
+      spark:
+        version: 1.5.1-bin-hadoop2.6
     path: /srv/pillar/hadoop.sls
   - content: |
         mine_functions:
@@ -71,7 +74,7 @@ write_files:
 runcmd:
   - bash /tmp/bootstrap-master.sh
   - bash /tmp/bootstrap-minion.sh
-  - git clone https://github.com/saltstack-formulas/hadoop-formula /srv/salt/formulas/hadoop-formula
+  - git clone https://github.com/cgeroux/hadoop-formula.git /srv/salt/formulas/hadoop-formula
   - git clone https://github.com/saltstack-formulas/hostsfile-formula /srv/salt/formulas/hostsfile-formula
   - git clone https://github.com/saltstack-formulas/sun-java-formula /srv/salt/formulas/sun-java-formula
   - git clone https://github.com/cgeroux/init-salt.git /tmp/salt-init
