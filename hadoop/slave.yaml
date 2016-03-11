@@ -1,13 +1,9 @@
 #cloud-config
 apt_sources:
- - source: "ppa:saltstack/salt"
+  - source: "ppa:saltstack/salt"
 packages: 
   - python-software-properties
   - salt-minion
-
-runcmd: 
- - bash /tmp/bootstrap-minion.sh
-
 write_files: 
   - content: |
          roles:
@@ -27,3 +23,5 @@ write_files:
             network.ip_addrs: []
             grains.items: []
     path: /etc/salt/minion.d/mine_functions.conf
+runcmd: 
+ - bash /tmp/bootstrap-minion.sh

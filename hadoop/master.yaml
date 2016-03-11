@@ -6,13 +6,13 @@ packages:
   - git
   - salt-master
   - salt-minion
-
+  - make
 write_files:
   - content: |
         roles:
            - hadoop_master
-         hdfs_data_disks:
-            - /mnt
+        hdfs_data_disks:
+           - /mnt
     path: /etc/salt/grains
   - content: |
         #!/bin/bash
@@ -50,6 +50,7 @@ write_files:
           - sun-java.env
           - hadoop
           - hadoop.hdfs
+          - hadoop.yarn
           - hadoop.spark
     path: /srv/salt/top.sls
   - content: |
