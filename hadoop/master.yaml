@@ -11,6 +11,8 @@ write_files:
   - content: |
         roles:
            - hadoop_master
+         hdfs_data_disks:
+            - /mnt
     path: /etc/salt/grains
   - content: |
         #!/bin/bash

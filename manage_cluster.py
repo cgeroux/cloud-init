@@ -26,6 +26,13 @@ import string
 # - add ability to boot from volumes
 # - add ability to mount volumes (may need to do this via cloud-init/salt)
 # - improve the way salt minions connect to salt master (using keys or something)
+# - depending on the type of cluster being created will need to limit the
+#   flavours, for example the hadoop cluster should be created with "c" flavour
+#   nodes as the configuration scripts are configured to use the ephemeral disk
+#   Persistent web-servers should boot off of volumes and thus probably won't
+#   need the extra ephemeral storage. I also need to think about making this 
+#   work for west cloud (i.e. include their flavors) and also for the new cc
+#   clouds.
 
 #maximum amount of time to wait for node to boot before skip rest of setup
 maxWaitTimeForNodeBoot=20
