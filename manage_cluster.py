@@ -6,7 +6,29 @@ from lxml import etree
 from lxml import objectify
 import time
 from os import environ as env
-import novaclient.v1_1.client as nvclient
+
+#try:
+import novaclient.client as nvclient
+nvAPIVersion="2.0"#can't seem to find a good way to get the version number
+#print("nvclient.api_versions=",dir(nvclient.api_versions))
+#print("nvclient.get_available_major_versions=",nvclient.api_versions.get_available_major_versions())
+#import inspect
+#print("nvclient.get_api_version=",nvclient.api_versions.get_api_version("2.0"))
+#print("nvclient.get_api_version=",inspect.getsourcelines(nvclient.api_versions.get_api_version("1.1")))
+#unfortunately this seems like it may produce other versions besides 2.0, will
+#need to test this. The OpenStack Python API documentation is sometimes 
+#contradictory, and far from incomplete. Looking at the various functions 
+#through python introspection to view both doc strings and source still does
+#not clarify how to actually get which version of the API is loaded. I suspect
+#it is still very much a work in progress.
+#except ImportError as e:
+#  #TODO: check to see if v1_1 of this works as above, i.e. the version
+#  #doesn't need to be specified? and just do novaclient.client
+#  #unfortunately some of the official documentation shows using v1_1.client
+#  #while others show using just .client
+#  print("no nova client v2, trying v1.1")
+#  import novaclient.v1_1.client as nvclient
+#  nvAPIVersion="1.1"
 import novaclient
 import sys
 import os
@@ -469,7 +491,7 @@ def main():
         +"\" not found, did you source the cloud *-openrc.sh file?")
   
   #create the nova client
-  nova=nvclient.Client(auth_url=env['OS_AUTH_URL']
+  nova=nvclient.Client(nvAPIVersion,auth_url=env['OS_AUTH_URL']
     ,username=env['OS_USERNAME'],api_key=env['OS_PASSWORD']
     ,project_id=env['OS_TENANT_NAME'],region_name=env['OS_REGION_NAME'])
   

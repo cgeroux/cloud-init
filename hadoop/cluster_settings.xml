@@ -6,7 +6,7 @@
     <name>master</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
     <flavor>c1-3.75gb-36</flavor>
-    <key-name>thekey</key-name>
+    <key-name>glooscap</key-name>
     <properties>
       <property>salt-master</property>
       <property>salt-minion</property>
@@ -30,7 +30,7 @@
     <name>slave</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
     <flavor>c1-3.75gb-36</flavor>
-    <key-name>thekey</key-name>
+    <key-name>glooscap</key-name>
     <properties>
       <property>salt-minion</property>
     </properties>
