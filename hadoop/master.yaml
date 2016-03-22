@@ -50,6 +50,7 @@ write_files:
           - sun-java.env
           - hadoop
           - hadoop.hdfs
+          - hadoop.mapred
           - hadoop.yarn
           - hadoop.spark
     path: /srv/salt/top.sls
