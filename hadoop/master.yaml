@@ -60,14 +60,42 @@ write_files:
            - hadoop
     path: /srv/pillar/top.sls
   - content: |
+      spark:
+        version: 1.6.0-bin-hadoop2.6
       hadoop:
         version: apache-2.7.1 # ['apache-1.2.1', 'apache-2.2.0', 'hdp-1.3.0', 'hdp-2.2.0', 'cdh-4.5.0', 'cdh-4.5.0-mr1']
+        targeting_method: grain # [compound, glob] also supported
         users:
           hadoop: 6000
           hdfs: 6001
+          mapred: 6002
           yarn: 6003
-      spark:
-        version: 1.6.0-bin-hadoop2.6
+        config:
+          directory: /etc/hadoop/conf
+          core-site:
+            io.native.lib.available:
+              value: true
+            io.file.buffer.size:
+              value: 65536
+            fs.trash.interval:
+              value: 60
+      hdfs:
+        namenode_target: "roles:hadoop_master" # Specify compound matching string to match all your namenodes
+        datanode_target: "roles:hadoop_slave" # Specify compound matching string to match all your datanodes e.g. if you were to use pillar I@datanode:true
+        config:
+          namenode_port: 8020
+          namenode_http_port: 50070
+          secondarynamenode_http_port: 50090
+          # the number of hdfs replicas is normally auto-configured for you in hdfs.settings
+          # according to the number of available datanodes
+          # replication: 1
+          hdfs-site:
+            dfs.permission:
+              value: false
+            dfs.durable.sync:
+              value: true
+            dfs.datanode.synconclose:
+              value: true
       mapred:
         jobtracker_target: "roles:hadoop_master"
         tasktracker_target: "roles:hadoop_slave"
