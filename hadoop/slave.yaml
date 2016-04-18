@@ -8,6 +8,7 @@ write_files:
   - content: |
          roles:
             - hadoop_slave
+            - spark_target
          hdfs_data_disks:
             - /mnt
     path: /etc/salt/grains
