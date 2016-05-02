@@ -6,7 +6,7 @@
     <name>master</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
     <flavor>c1-3.75gb-36</flavor>
-    <key-name>thekey</key-name>
+    <key-name>ACENET_WORKSHOP_KEY</key-name>
     <properties>
       <property>salt-master</property>
       <property>salt-minion</property>
@@ -21,8 +21,6 @@
       </replaces>
       <file>./master.yaml</file>
     </cloud-init>
-    <floating-ip>206.167.181.71</floating-ip>
-    <network>cgeroux-project_network</network>
   </node>
   <!--
   <node>
