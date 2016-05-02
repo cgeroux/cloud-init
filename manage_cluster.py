@@ -379,31 +379,33 @@ class Cluster(object):
     self.nodes=[]
     for xmlNode in clusterElement:
       
-      #get number of instances
-      xmlNumInstances=xmlNode.find("num-instances")
-      numInstances=1
-      if xmlNumInstances!=None:
-        numInstances=int(xmlNumInstances.text)
-      
-      #create the nodes
-      if numInstances==1:#if only one node
+      if xmlNode.tag=="node":#this takes care of the case when comments are included
         
-        #create one instance
-        self.nodes.append(Node(xmlNode,nova))
-      else:
+        #get number of instances
+        xmlNumInstances=xmlNode.find("num-instances")
+        numInstances=1
+        if xmlNumInstances!=None:
+          numInstances=int(xmlNumInstances.text)
         
-        #create numInstances with a suffix added to the name
-        originalName=xmlNode.find("name").text
-        for i in range(numInstances):
+        #create the nodes
+        if numInstances==1:#if only one node
           
-          #create a node
-          xmlCurNode=copy.deepcopy(xmlNode)
-          node=Node(xmlCurNode,nova)
+          #create one instance
+          self.nodes.append(Node(xmlNode,nova))
+        else:
           
-          #adjust the node name
-          xmlName=xmlCurNode.find("name")
-          xmlName.text=originalName+"-"+str(i)
-          self.nodes.append(node)
+          #create numInstances with a suffix added to the name
+          originalName=xmlNode.find("name").text
+          for i in range(numInstances):
+            
+            #create a node
+            xmlCurNode=copy.deepcopy(xmlNode)
+            node=Node(xmlCurNode,nova)
+            
+            #adjust the node name
+            xmlName=xmlCurNode.find("name")
+            xmlName.text=originalName+"-"+str(i)
+            self.nodes.append(node)
   def create(self):
     """Creates all the nodes in the cluster as needed and ensures they are all
     active

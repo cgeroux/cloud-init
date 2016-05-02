@@ -24,9 +24,9 @@
     <floating-ip>206.167.181.71</floating-ip>
     <network>cgeroux-project_network</network>
   </node>
-  
+  <!--
   <node>
-    <num-instances>3</num-instances>
+    <num-instances>1</num-instances>
     <name>slave</name>
     <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
     <flavor>c1-3.75gb-36</flavor>
@@ -45,5 +45,5 @@
       <file>./slave.yaml</file>
     </cloud-init>
     <network>cgeroux-project_network</network>
-  </node>
+  </node>-->
 </cluster>
