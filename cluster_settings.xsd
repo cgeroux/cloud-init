@@ -12,7 +12,7 @@
                 <xs:element name="image" type="xs:string" />
                 <xs:element name="flavor" type="xs:string" />
                 <xs:element name="key-name" type="xs:string" />
-                <xs:element name="network" type="xs:string" />
+                <xs:element name="network" type="xs:string" minOccurs="0" maxOccurs="1"/>
                 <xs:element name="properties" minOccurs="0" maxOccurs="1">
                   <xs:complexType>
                     <xs:sequence>

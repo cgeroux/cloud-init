@@ -274,7 +274,27 @@ class Node(object):
     #Get parameters for creating a node
     image=self.nova.images.find(name=self.xmlSettings.find("image").text)
     flavor=self.nova.flavors.find(name=self.xmlSettings.find("flavor").text)
-    net=self.nova.networks.find(label=self.xmlSettings.find("network").text)
+    
+    if self.xmlSettings.find("network")!=None:
+      
+      #use user specified network name
+      networkName=self.xmlSettings.find("network").text
+    else:
+      
+      #try to detect a good network to connect node to
+      networkName=None
+      for network in self.nova.networks.list():
+        #print()
+        if network.human_id[len(network.human_id)-8:]=="_network":
+          networkName=network.human_id
+          break
+      if networkName==None:
+        raise Exception("unable to auto detect a network to connect node to. Please "
+        +"specify on in the XML cluster settings file with the \"network\" XML node.")
+    
+    net=self.nova.networks.find(label=networkName)
+    
+    
     nics=[{'net-id':net.id}]
     
     userDataFile=self._createUserDataFile(nodes)
