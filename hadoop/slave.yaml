@@ -7,10 +7,10 @@ packages:
 fs_setup:
   - label: None
     filesystem: 'ext4'
-    device: '/dev/vdb1'
+    device: '/dev/vdb'
     partition: 'auto'
 mounts:
- - [ /dev/vdb1, /mnt, "ext4", "defaults,noatime"]
+ - [ /dev/vdb, /mnt, "ext4", "defaults,noatime"]
 mount_default_fields: [ None, None, "ext4", "defaults,noatime", "0", "2"]
 write_files: 
   - content: |
