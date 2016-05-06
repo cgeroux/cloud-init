@@ -4,9 +4,9 @@
   
   <node>
     <name>master</name>
-    <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
-    <flavor>c1-3.75gb-36</flavor>
-    <key-name>ACENET_WORKSHOP_KEY</key-name>
+    <image>ubuntu-server-14.04-amd64</image>
+    <flavor>c4-15gb-83</flavor>
+    <key-name>thekey</key-name>
     <properties>
       <property>salt-master</property>
       <property>salt-minion</property>
@@ -21,13 +21,13 @@
       </replaces>
       <file>./master.yaml</file>
     </cloud-init>
+    <floating-ip>206.12.48.119</floating-ip>
   </node>
-  <!--
   <node>
-    <num-instances>1</num-instances>
+    <num-instances>4</num-instances>
     <name>slave</name>
-    <image>Ubuntu_14.04_Trusty-amd64-20150708</image>
-    <flavor>c1-3.75gb-36</flavor>
+    <image>ubuntu-server-14.04-amd64</image>
+    <flavor>c2-7.5gb-31</flavor>
     <key-name>thekey</key-name>
     <properties>
       <property>salt-minion</property>
@@ -42,6 +42,5 @@
       </replaces>
       <file>./slave.yaml</file>
     </cloud-init>
-    <network>cgeroux-project_network</network>
-  </node>-->
+  </node>
 </cluster>
